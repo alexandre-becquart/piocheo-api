@@ -16,7 +16,7 @@ npm run seed
 npm start
 ```
 
-Conserver le fichier `.env` entre les démarrages. Pour contrôler la connexion à la base, interroger `/health` sur le port 3100. MongoDB écoute en local sur le port 27029. `docker compose stop` arrête la base en conservant le volume.
+Conserver le fichier `.env` entre les démarrages. En développement, l’API accepte le front ouvert via `localhost`, `127.0.0.1` ou une adresse du réseau local (test sur téléphone), quel que soit le port. En production, seules les origines listées dans `PIOCHEO_WEB_ORIGINS` sont acceptées. Pour contrôler la connexion à la base, interroger `/health` sur le port 3100. MongoDB écoute en local sur le port 27029. `docker compose stop` arrête la base en conservant le volume.
 
 Le seed fournit douze jeux fictifs (deux pages de catalogue), deux avis, trois événements (soirée jeux, tournoi et rencontre), cinq tables dont une privée « Mon cercle », neuf résultats confirmés qui alimentent le classement de Tournai, un résultat en attente et deux notifications. Les comptes de démonstration sont `camille@example.test` (organisatrice), `sam@example.test`, `lea@example.test`, `thomas@example.test`, `nora@example.test` et `hugo@example.test`. Leur mot de passe de démonstration est `DemoPiocheo2026!`. Sam est invité à la table privée de Camille et doit confirmer un score qu’elle a encodé. Le seed vérifie que la base est locale et refuse le mode production. Il actualise les dates des activités de démonstration et préserve les inscriptions déjà enregistrées.
 

@@ -6,27 +6,20 @@ const mongoSanitize = require('express-mongo-sanitize')
 const { fail, missing } = require('./_helpers/http')
 const errorHandler = require('./_middleware/error-handler')
 const routes = require('./routes')
+const { PROD_ORIGINS, WEB_URL, DEV_WEB_URL, normalizeOrigins, localOrigin } = require('./_helpers/corsOrigins')
 const { createMailer } = require('./services/mailer')
 
-// En développement, le front peut être ouvert via localhost, 127.0.0.1 ou l’adresse réseau
-// affichée par Vue CLI (test sur téléphone). En production, seules les origines exactes passent.
-function localOrigin(origin) {
-  try {
-    const { protocol, hostname } = new URL(origin)
-    return ['http:', 'https:'].includes(protocol) && (['localhost', '127.0.0.1', '[::1]'].includes(hostname) ||
-      /^(10\.\d+|192\.168|172\.(1[6-9]|2\d|3[01]))\.\d+\.\d+$/.test(hostname))
-  } catch {
-    return false
-  }
-}
-
-function createApp({ secret, allowedOrigins, production = false, trustProxy = 0, google = { client: null }, mailer = createMailer({}) }) {
+function createApp({ secret, allowedOrigins = [], production = false, trustProxy = production ? 1 : 0, webUrl, google = { client: null }, mailer = createMailer({}) }) {
   if (!secret || secret.length < 32) throw new Error('PIOCHEO_JWT_SECRET doit contenir au moins 32 caractères.')
   const app = express()
+  const extra = normalizeOrigins(allowedOrigins)
+  allowedOrigins = [...new Set([...PROD_ORIGINS, ...extra])]
   const exact = new Set(allowedOrigins)
+  // Adresse du site pour les retours Google et les liens des e-mails (CLIENT_URL sur Wayd).
+  const site = normalizeOrigins([webUrl || (production ? WEB_URL : extra[0] || DEV_WEB_URL)])[0]
   const origins = { has: origin => exact.has(origin) || (!production && Boolean(origin) && localOrigin(origin)) }
   app.disable('x-powered-by')
-  // Derrière Coolify : Traefik puis le Nginx du front (2 sauts), comme Wayd fait confiance à Traefik.
+  // Comme Wayd : en production, on fait confiance à Traefik (1 saut), sauf réglage PIOCHEO_TRUST_PROXY.
   app.set('trust proxy', trustProxy)
   app.use(helmet())
   app.use((_req, res, next) => {
@@ -35,6 +28,7 @@ function createApp({ secret, allowedOrigins, production = false, trustProxy = 0,
   })
   app.use(cors({ credentials: true, origin(origin, done) {
     if (!origin || origins.has(origin)) return done(null, true)
+    console.warn(`Origine refusée : ${origin} (autorisées : ${allowedOrigins.join(', ')})`)
     done(fail(403, 'Origine non autorisée.'))
   } }))
   app.use(express.json({ limit: '32kb' }), cookieParser(), mongoSanitize())
@@ -45,7 +39,7 @@ function createApp({ secret, allowedOrigins, production = false, trustProxy = 0,
     next()
   })
 
-  app.use(routes({ secret, production, webOrigin: allowedOrigins[0], mailer, google }))
+  app.use(routes({ secret, production, webOrigin: site, mailer, google }))
   app.use((_req, _res, next) => next(missing()))
   app.use(errorHandler)
   return app

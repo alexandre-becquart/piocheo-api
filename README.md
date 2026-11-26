@@ -20,6 +20,10 @@ Conserver le fichier `.env` entre les démarrages. En développement, l’API ac
 
 Le seed fournit douze jeux fictifs (deux pages de catalogue), deux avis, trois événements (soirée jeux, tournoi et rencontre), cinq tables dont une privée « Mon cercle », neuf résultats confirmés qui alimentent le classement de Tournai, un résultat en attente et deux notifications. Les comptes de démonstration sont `camille@example.test` (organisatrice), `sam@example.test`, `lea@example.test`, `thomas@example.test`, `nora@example.test` et `hugo@example.test`. Leur mot de passe de démonstration est `DemoPiocheo2026!`. On peut aussi se connecter avec le pseudo (`camille`, `sam`…). Sam est invité à la table privée de Camille et doit confirmer un score qu’elle a encodé. Le seed vérifie que la base est locale et refuse le mode production. Il actualise les dates des activités de démonstration et préserve les inscriptions déjà enregistrées.
 
+## Catalogue de lancement
+
+`data/catalogue-belgique.json` contient 100 vrais jeux (sélection éditoriale pour le lancement belge, sans images ni liens de règles). Au démarrage, l’API ajoute ceux qui manquent : un jeu déjà présent avec le même slug ou le même titre est conservé tel quel, avec son identifiant. Relancer ne crée aucun doublon. `PIOCHEO_IMPORT_CATALOGUE=false` désactive cet ajout. `npm run catalogue` fait la même chose à la main, et `npm run catalogue -- --plan` affiche seulement le nombre de jeux à ajouter. En développement, la fiche démo « Les Cartographes » partage le slug `cartographes` avec « Cartographers » : la première arrivée est gardée.
+
 ## Vérifier
 
 `npm test` utilise MongoDB en local et crée une base de test isolée, supprimée à la fin. Les tests Supertest couvrent la recherche, les avis, les autorisations, les réponses concurrentes pour la dernière place, l’historique, les décisions sur les résultats, les inscriptions aux événements et les notifications nominatives. Définir `PIOCHEO_TEST_MONGODB_URI` pour un autre port local.

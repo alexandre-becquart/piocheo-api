@@ -8,11 +8,13 @@ COPY --chmod=0644 app.js server.js ./
 COPY _helpers/ ./_helpers/
 COPY _middleware/ ./_middleware/
 COPY controllers/ ./controllers/
+COPY data/ ./data/
 COPY models/ ./models/
 COPY routes/ ./routes/
+COPY scripts/catalogue.js ./scripts/
 COPY services/ ./services/
 COPY templates/ ./templates/
-RUN chmod -R a+rX _helpers _middleware controllers models routes services templates
+RUN chmod -R a+rX _helpers _middleware controllers data models scripts routes services templates
 ENV HOST=0.0.0.0
 ENV NODE_ENV=production
 USER node

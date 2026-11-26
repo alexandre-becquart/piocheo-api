@@ -36,13 +36,18 @@ async function getTable(req) {
 
 async function list(req, res) {
   const filters = input(Joi.object({
-    game: id, event: id, view: Joi.string().valid('open', 'circle'), city: label,
+    game: id, event: id, view: Joi.string().valid('open', 'circle', 'mine'), city: label,
   }), req.query)
-  const query = { ...tableScope(req.user), starts: { $gte: new Date() } }
+  // « mine » : l'agenda personnel de Mon espace (tables organisées, places demandées, invitations, participations).
+  if (filters.view === 'mine' && !req.user) throw fail(401, 'Connecte-toi pour voir tes parties.')
+  const query = filters.view === 'mine' ? { starts: { $gte: new Date() }, $or: [
+    { host: req.user._id },
+    { members: { $elemMatch: { user: req.user._id, status: { $in: ['pending', 'invited', 'accepted'] } } } },
+  ] } : { ...tableScope(req.user), starts: { $gte: new Date() } }
   if (filters.game) query.game = filters.game
   if (filters.event) query.event = filters.event
   if (filters.city) query.city = filters.city
-  if (filters.view) query.visibility = filters.view === 'circle' ? 'private' : 'open'
+  if (filters.view === 'open' || filters.view === 'circle') query.visibility = filters.view === 'circle' ? 'private' : 'open'
   const tables = await Table.find(query).collation(cityCollation).populate('game').sort('starts').limit(60).lean()
   res.json(tables.map(table => tableView(table, req.user)))
 }

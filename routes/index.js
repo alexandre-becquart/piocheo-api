@@ -9,6 +9,7 @@ const tables = require('./collections/tables')
 const events = require('./collections/events')
 const results = require('./collections/results')
 const rankings = require('./collections/rankings')
+const notifications = require('./collections/notifications')
 
 function routes({ secret, production }) {
   const router = express.Router()
@@ -22,6 +23,7 @@ function routes({ secret, production }) {
   router.use('/events', events)
   router.use('/results', results)
   router.use('/rankings', rankings)
+  router.use('/notifications', notifications)
   return router
 }
 

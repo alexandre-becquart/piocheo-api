@@ -32,4 +32,4 @@ function standings(results, direction) {
   })
 }
 
-module.exports = { VERSION, standings }
+module.exports = { VERSION, eligible, standings }

@@ -8,6 +8,7 @@ const { id, label, input, lookupId } = require('../_helpers/validation')
 const { equal } = require('../_helpers/queries')
 const { VERSION } = require('../services/ranking')
 const tableScope = require('../_helpers/tableScope')
+const { notify } = require('../services/notifications')
 
 function resultScope(user) {
   return { $or: [{ author: user._id }, { 'entries.user': user._id }] }
@@ -64,17 +65,28 @@ async function create(req, res) {
   const status = participants.length > 1 ? 'pending' : 'local'
   if (status === 'local') data.visibility = 'private'
   const result = await Result.create({ ...data, entries, author: req.user._id, played: new Date(), status, mode, ruleVersion: VERSION })
+  if (status === 'pending') {
+    await notify(participants, {
+      kind: 'result.pending', link: '/resultats/' + result._id,
+      text: `${req.user.name} a encodé un score pour ${game.name}. Confirme-le ou conteste-le.`,
+    }, req.user._id)
+  }
   res.status(201).json({ id: result._id })
 }
 
 async function decide(req, res) {
   const { confirm } = input(Joi.object({ confirm: Joi.boolean().required() }), req.body)
   const scope = { _id: lookupId(req.params.id), author: { $ne: req.user._id }, 'entries.user': req.user._id }
-  if (!await Result.exists(scope)) throw missing()
+  const result = await Result.findOne(scope).populate('game', 'name').lean()
+  if (!result) throw missing()
   const updated = await Result.updateOne({ ...scope, status: 'pending' }, {
     $set: { status: confirm ? 'confirmed' : 'contested', decidedBy: req.user._id },
   })
   if (!updated.modifiedCount) throw fail(409, 'Ce résultat a déjà reçu une réponse.')
+  await notify([result.author], {
+    kind: confirm ? 'result.confirmed' : 'result.contested', link: '/resultats/' + result._id,
+    text: `${req.user.name} a ${confirm ? 'confirmé' : 'contesté'} le score de ${result.game.name}.`,
+  }, req.user._id)
   res.sendStatus(204)
 }
 

@@ -144,6 +144,16 @@ test('Parcours Piochéo avec MongoDB', async t => {
     assert.equal((await anonymous.get('/rankings').query({city:'Ville sans partie'}).expect(200)).body.game, null)
     assert.equal(ranking.personal.user, cam.id)
     assert.equal((await host.get('/auth/me').expect(200)).body.city, city)
+    const mine = (await host.get('/rankings/mine').query({city}).expect(200)).body
+    assert.deepEqual(mine.items.map(item => [item.game, item.rank]), [[String(game._id), ranking.personal.rank]])
+    await anonymous.get('/rankings/mine').query({city}).expect(401)
+    assert.deepEqual((await host.get('/rankings/mine').query({city:'Ville sans partie'}).expect(200)).body.items, [])
+    const rankedGames = (await host.get('/games').query({ranked:'true',city}).expect(200)).body
+    assert.deepEqual(rankedGames.items.map(item => String(item._id)), [String(game._id)])
+    assert.equal(rankedGames.total, 1)
+    assert.equal((await host.get('/games').query({ranked:'true',city,type:game.type === 'Ambiance' ? 'Famille' : 'Ambiance'}).expect(200)).body.total, 0)
+    await anonymous.get('/games').query({ranked:'true',city}).expect(401)
+    await host.get('/games').query({ranked:'true'}).expect(400)
     const draft = { game:String(game._id),city,visibility:'open',entries:[{user:cam.id,score:8},{user:sam.id,score:8}] }
     const contested = (await host.post('/results').send(draft).expect(201)).body.id
     await guest.post('/results/' + contested + '/decision').send({confirm:false}).expect(204)

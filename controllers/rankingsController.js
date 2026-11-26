@@ -5,6 +5,7 @@ const { missing } = require('../_helpers/http')
 const { id, label, input } = require('../_helpers/validation')
 const { cityCollation, equal } = require('../_helpers/queries')
 const { VERSION, eligible, standings } = require('../services/ranking')
+const { personalRanks } = require('../services/personalRanks')
 
 async function list(req, res) {
   const query = input(Joi.object({ game: id, city: label.required() }), req.query)
@@ -21,4 +22,12 @@ async function list(req, res) {
   res.json({ game: selected._id, items, confirmed: results.filter(eligible).length, personal: items[index] || null, near: index < 0 ? [] : items.slice(Math.max(0, index - 2), index + 3), ruleVersion: VERSION })
 }
 
-module.exports = { list }
+// Rangs du compte connecté dans une ville, pour tous ses jeux classés (encart « Mon classement » du catalogue).
+// Le compte vient de la session : chacun ne lit que ses propres rangs.
+async function mine(req, res) {
+  const { city } = input(Joi.object({ city: label.required() }), req.query)
+  const ranks = await personalRanks(req.user._id, city)
+  res.json({ city, items: [...ranks.values()], ruleVersion: VERSION })
+}
+
+module.exports = { list, mine }

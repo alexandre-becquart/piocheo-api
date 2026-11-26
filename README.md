@@ -55,4 +55,7 @@ Le verrou Piochéo intègre les correctifs signalés par l’audit des dépendan
 
 ## Déploiement séparé
 
+Le guide `docs/DEPLOIEMENT.md` décrit la mise en ligne sur le VPS OVH avec Coolify, comme Wayd.
+
+
 Le Dockerfile lance l’API sur le port 3100. Fournir un `PIOCHEO_MONGODB_URI` dédié, un `PIOCHEO_JWT_SECRET` indépendant et l’origine Web exacte via `PIOCHEO_WEB_ORIGINS`. En production, activer `NODE_ENV=production` et terminer TLS sur le proxy Web pour les cookies sécurisés. Utiliser le proxy `/api` du front pour conserver la même origine. Les données de démonstration sont destinées au développement.

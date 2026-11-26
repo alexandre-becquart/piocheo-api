@@ -19,12 +19,14 @@ function localOrigin(origin) {
   }
 }
 
-function createApp({ secret, allowedOrigins, production = false }) {
+function createApp({ secret, allowedOrigins, production = false, trustProxy = 0 }) {
   if (!secret || secret.length < 32) throw new Error('PIOCHEO_JWT_SECRET doit contenir au moins 32 caractères.')
   const app = express()
   const exact = new Set(allowedOrigins)
   const origins = { has: origin => exact.has(origin) || (!production && Boolean(origin) && localOrigin(origin)) }
   app.disable('x-powered-by')
+  // Derrière Coolify : Traefik puis le Nginx du front (2 sauts), comme Wayd fait confiance à Traefik.
+  app.set('trust proxy', trustProxy)
   app.use(helmet())
   app.use((_req, res, next) => {
     res.set("Cache-Control", "no-store")

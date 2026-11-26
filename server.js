@@ -8,6 +8,7 @@ async function main() {
     secret: process.env.PIOCHEO_JWT_SECRET,
     allowedOrigins: (process.env.PIOCHEO_WEB_ORIGINS || 'http://localhost:8080').split(',').map(value => value.trim()),
     production: process.env.NODE_ENV === 'production',
+    trustProxy: Number(process.env.PIOCHEO_TRUST_PROXY || 0),
   })
   if (!process.env.PIOCHEO_MONGODB_URI) throw new Error('Configure PIOCHEO_MONGODB_URI.')
   await mongoose.connect(process.env.PIOCHEO_MONGODB_URI)

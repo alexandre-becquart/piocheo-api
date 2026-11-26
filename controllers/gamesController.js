@@ -1,17 +1,25 @@
 const Joi = require('joi')
 const Game = require('../models/Game')
 const Review = require('../models/Review')
-const { missing } = require('../_helpers/http')
-const { notes, input, lookupId } = require('../_helpers/validation')
+const { missing, fail } = require('../_helpers/http')
+const { notes, label, input, lookupId } = require('../_helpers/validation')
+const { personalRanks } = require('../services/personalRanks')
 const { escapeRegex } = require('../_helpers/queries')
 
 async function list(req, res) {
-  const { q, players, minutes, type, page } = input(Joi.object({
+  const { q, players, minutes, type, page, ranked, city } = input(Joi.object({
     q: Joi.string().trim().max(100).allow(''), players: Joi.number().integer().min(1).max(30),
     minutes: Joi.number().integer().min(5).max(600), type: Joi.string().valid('Stratégie', 'Ambiance', 'Coopératif', 'Famille'),
     page: Joi.number().integer().min(1).max(1000).default(1),
+    // « Mes jeux classés » : seulement les jeux où le compte connecté a un rang dans cette ville.
+    ranked: Joi.boolean().truthy('1').falsy('0').default(false), city: label.when('ranked', { is: true, then: Joi.required() }),
   }), req.query)
   const filter = {}
+  if (ranked) {
+    if (!req.user) throw fail(401, 'Connecte-toi pour continuer.')
+    // Appliqué au catalogue complet avant le comptage et la pagination.
+    filter._id = { $in: [...(await personalRanks(req.user._id, city)).keys()] }
+  }
   if (q) filter.name = { $regex: escapeRegex(q), $options: 'i' }
   if (players) Object.assign(filter, { minPlayers: { $lte: players }, maxPlayers: { $gte: players } })
   if (minutes) filter.minutes = { $lte: minutes }

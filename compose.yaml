@@ -1,0 +1,14 @@
+services:
+  mongo:
+    image: mongo:8.2.6@sha256:9690b268c50317b2988a7f84f514a2cdcf4de6836e12c295b48f3a203731fce1
+    ports:
+      - "127.0.0.1:27029:27017"
+    volumes:
+      - piocheo-mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  piocheo-mongo:

@@ -4,24 +4,27 @@ const { createApp } = require('./app')
 const models = require('./models')
 const { createMailer } = require('./services/mailer')
 const { createGoogle } = require('./services/google')
+const { envOrigins } = require('./_helpers/corsOrigins')
 
+// Comme Wayd : les adresses de production (piocheo.com, api.piocheo.com) sont dans le code.
+// Coolify n'a à fournir que les secrets (JWT, MongoDB, Google, Resend).
 async function main() {
   const production = process.env.NODE_ENV === 'production'
-  // En production, sans PIOCHEO_WEB_ORIGINS, toutes les inscriptions et connexions seraient refusées (403).
-  if (production && !process.env.PIOCHEO_WEB_ORIGINS) throw new Error('Configure PIOCHEO_WEB_ORIGINS (ex. https://piocheo.com).')
+  const google = createGoogle(process.env, production)
   const app = createApp({
     secret: process.env.PIOCHEO_JWT_SECRET,
-    allowedOrigins: (process.env.PIOCHEO_WEB_ORIGINS || 'http://localhost:8080').split(',').map(value => value.trim()),
+    allowedOrigins: envOrigins(),
     production,
-    trustProxy: Number(process.env.PIOCHEO_TRUST_PROXY || 0),
-    google: createGoogle(),
+    trustProxy: process.env.PIOCHEO_TRUST_PROXY === undefined ? (production ? 1 : 0) : Number(process.env.PIOCHEO_TRUST_PROXY),
+    webUrl: process.env.PIOCHEO_WEB_URL || process.env.CLIENT_URL,
+    google,
     mailer: createMailer(),
   })
   if (!process.env.PIOCHEO_MONGODB_URI) throw new Error('Configure PIOCHEO_MONGODB_URI.')
   await mongoose.connect(process.env.PIOCHEO_MONGODB_URI)
   await Promise.all(Object.values(models).map(model => model.init()))
   app.listen(Number(process.env.PORT || 3100), process.env.HOST || '127.0.0.1', () => {
-    console.log(`API Piochéo démarrée. Origines autorisées : ${(process.env.PIOCHEO_WEB_ORIGINS || 'http://localhost:8080')}`)
+    console.log(`API Piochéo démarrée (${production ? 'production' : 'développement'}). Google : ${google.client ? google.callback : 'non configuré'}.`)
   })
 }
 

@@ -14,6 +14,7 @@ COPY services/ ./services/
 COPY templates/ ./templates/
 RUN chmod -R a+rX _helpers _middleware controllers models routes services templates
 ENV HOST=0.0.0.0
+ENV NODE_ENV=production
 USER node
 EXPOSE 3100
 CMD ["node", "server.js"]

@@ -4,6 +4,7 @@ const { test } = require('node:test')
 const mongoose = require('mongoose')
 const request = require('supertest')
 const { createApp } = require('../app')
+const { createGoogle } = require('../services/google')
 const models = require('../models')
 const { Game, Table, User } = models
 
@@ -54,13 +55,24 @@ test('Parcours Piochéo avec MongoDB', async t => {
     // Une barre finale saisie dans PIOCHEO_WEB_ORIGINS ne doit pas bloquer les inscriptions.
     const trailing = createApp({ secret: randomUUID(), allowedOrigins: [' https://piocheo.example/ '], production: true })
     await request(trailing).post('/auth/logout').set('Origin', 'https://piocheo.example').expect(200)
-    const proxied = createApp({ secret: randomUUID(), allowedOrigins: ['https://piocheo.com'], production: true, trustProxy: 1 })
+    // Comme Wayd : sans aucune variable, la production accepte piocheo.com et www.piocheo.com et fait confiance à Traefik.
+    const proxied = createApp({ secret: randomUUID(), production: true })
+    await request(proxied).get('/games').set('Origin', 'https://www.piocheo.com').expect(200)
+    await request(proxied).get('/games').set('Origin', 'http://localhost:8080').expect(403)
     const secure = await request(proxied).post('/auth/register').set('Origin', 'https://piocheo.com').set('Sec-Fetch-Site', 'same-site')
       .set('X-Forwarded-Proto', 'https').set('X-Forwarded-For', '203.0.113.9').send({ firstName: 'Proxy', lastName: 'Test', email: 'proxy@example.test', password })
     assert.equal(secure.status, 201)
     assert.equal(secure.headers['access-control-allow-origin'], 'https://piocheo.com')
     assert.equal(secure.headers['access-control-allow-credentials'], 'true')
     assert.match(secure.headers['set-cookie'][0], /Secure/)
+    const google = createGoogle({ PIOCHEO_GOOGLE_CLIENT_ID: 'id', PIOCHEO_GOOGLE_CLIENT_SECRET: 'secret' }, true)
+    assert.equal(google.callback, 'https://api.piocheo.com/auth/google/callback')
+    assert.ok(google.client)
+    assert.equal(createGoogle({ GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 's', PIOCHEO_GOOGLE_CALLBACK_URL: 'http://localhost:3100/auth/google/callback' }, true).callback,
+      'https://api.piocheo.com/auth/google/callback')
+    assert.equal(createGoogle({}, false).client, null)
+    const reset = await request(proxied).get('/auth/google').expect(302)
+    assert.equal(reset.headers.location, 'https://piocheo.com/connexion?googleError=config')
     await request(proxied).post('/auth/register').set('Origin', 'https://autre.example').set('Sec-Fetch-Site', 'cross-site').send({}).expect(403)
     assert.equal((await host.get('/auth/me').expect(200)).body.id, cam.id)
     const { body } = await anonymous.get('/games').query({ q: 'carto', players: 2, minutes: 45, type: 'Stratégie' }).expect(200)

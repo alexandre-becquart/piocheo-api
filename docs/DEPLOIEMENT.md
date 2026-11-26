@@ -12,54 +12,40 @@ Créer un projet Coolify « Piochéo » avec trois ressources sur le même VPS.
 | `piocheo-api` | Application Dockerfile | `alexandre-becquart/piocheo-api`, branche `main`, port 3100 | `https://api.piocheo.com` |
 | `piocheo-web` | Application Dockerfile | `alexandre-becquart/piocheo-web`, branche `main`, port 80 | `https://piocheo.com` |
 
-Comme Wayd (`getwayd.com` et `api.getwayd.com`), le front et l'API ont chacun leur domaine. Les deux sont sur le même site `piocheo.com` : le cookie de session `SameSite=Lax` est envoyé aux appels du front vers l'API, et l'API n'accepte que l'origine `https://piocheo.com`.
+Comme Wayd (`getwayd.com` et `api.getwayd.com`), le front et l'API ont chacun leur domaine. Les deux sont sur le même site `piocheo.com` : le cookie de session `SameSite=Lax` est envoyé aux appels du front vers l'API, et l'API n'accepte que `https://piocheo.com` et `https://www.piocheo.com`.
 
 ## Variables d'environnement
+
+Comme pour Wayd, les adresses de production sont écrites dans le code : l'API accepte `https://piocheo.com` et `https://www.piocheo.com`, renvoie vers `https://piocheo.com` après Google et dans les e-mails, et Google revient sur `https://api.piocheo.com/auth/google/callback`. Le front appelle `https://api.piocheo.com` (fichier `.env.production` du dépôt web). Coolify ne fournit que les secrets.
 
 `piocheo-api` :
 
 ```
-NODE_ENV=production
-PORT=3100
-HOST=0.0.0.0
 PIOCHEO_MONGODB_URI=<URL interne de piocheo-db, base piocheo>
 PIOCHEO_JWT_SECRET=<openssl rand -hex 32, propre à Piochéo>
-PIOCHEO_WEB_ORIGINS=https://piocheo.com
-PIOCHEO_TRUST_PROXY=1
 RESEND_API_KEY=<clé Resend, domaine piocheo.com vérifié>
-EMAIL_FROM=Piochéo <noreply@piocheo.com>
 PIOCHEO_GOOGLE_CLIENT_ID=<identifiant client OAuth Google>
 PIOCHEO_GOOGLE_CLIENT_SECRET=<secret client OAuth Google>
-PIOCHEO_GOOGLE_CALLBACK_URL=https://api.piocheo.com/auth/google/callback
 ```
 
-### Si la connexion échoue en ligne
+`NODE_ENV=production`, `HOST=0.0.0.0` et `PORT=3100` sont fixés par le Dockerfile. Réglages facultatifs, à n'utiliser que pour sortir du cas normal :
 
-| Symptôme | Cause | Réglage |
-| --- | --- | --- |
-| Inscription ou connexion : `403 Forbidden` (« Origine non autorisée ») | `PIOCHEO_WEB_ORIGINS` absent ou différent de l'adresse du site | `PIOCHEO_WEB_ORIGINS=https://piocheo.com` sur `piocheo-api` (ajouter `,https://www.piocheo.com` si le site répond aussi en www), puis redéployer. Le journal de l'API affiche les origines autorisées au démarrage et chaque origine refusée. |
-| « Continuer avec Google » finit sur `localhost` | Même cause : l'API renvoie vers la première origine de `PIOCHEO_WEB_ORIGINS`, `http://localhost:8080` par défaut | Même réglage. Vérifier aussi que `PIOCHEO_GOOGLE_CALLBACK_URL` vaut `https://api.piocheo.com/auth/google/callback` et non la valeur locale de `.env.example`. |
-| Les appels partent vers `https://piocheo.com/api/…` au lieu de `https://api.piocheo.com/…` | `VUE_APP_API_URL` n'a pas été fournie au build | Sur `piocheo-web`, cocher « Build Variable » pour `VUE_APP_API_URL`, puis redéployer. Le relais `/api` fonctionne aussi, mais il faut alors `PIOCHEO_TRUST_PROXY=2` sur l'API. |
+| Variable | Effet |
+| --- | --- |
+| `PIOCHEO_WEB_ORIGINS` (ou `ALLOWED_ORIGINS`) | Origines supplémentaires, séparées par des virgules (ex. une préversion). Les origines de production restent acceptées. |
+| `PIOCHEO_WEB_URL` | Adresse du site si elle n'est plus `https://piocheo.com`. |
+| `PIOCHEO_GOOGLE_CALLBACK_URL` | Adresse de retour Google si l'API change de domaine. Une valeur `localhost` est ignorée en production. |
+| `PIOCHEO_TRUST_PROXY` | Nombre de proxys devant l'API. `1` par défaut en production (Traefik), `2` si l'on passe par le relais `/api` du front. |
+| `EMAIL_FROM` | Expéditeur, `Piochéo <noreply@piocheo.com>` par défaut. |
 
-Depuis cette version, l'API refuse de démarrer en production sans `PIOCHEO_WEB_ORIGINS`, pour que l'oubli se voie tout de suite.
+Les anciennes variables `PIOCHEO_WEB_ORIGINS=https://piocheo.com`, `PIOCHEO_TRUST_PROXY=1` ou `NODE_ENV=production` peuvent rester dans Coolify : elles ne changent rien.
 
 ### Connexion (comme Wayd)
 
 - **Mot de passe oublié** : l'e-mail part par Resend, comme pour Wayd. Ajouter le domaine `piocheo.com` dans Resend (enregistrements DNS SPF/DKIM chez le registraire), puis créer une clé d'API propre à Piochéo. Sans `RESEND_API_KEY`, la demande répond normalement mais aucun e-mail ne part (le journal l'indique).
-- **Continuer avec Google** : dans Google Cloud Console, créer un identifiant OAuth « Application Web » pour Piochéo. Origine JavaScript autorisée : `https://piocheo.com`. URI de redirection autorisée : `https://api.piocheo.com/auth/google/callback`. Écran de consentement : nom Piochéo, champs d'application `openid`, `email`, `profile`. Tant que les trois variables Google ne sont pas remplies, le bouton renvoie vers la connexion avec un message.
+- **Continuer avec Google** : dans Google Cloud Console, créer un identifiant OAuth « Application Web » pour Piochéo. Origine JavaScript autorisée : `https://piocheo.com`. URI de redirection autorisée : `https://api.piocheo.com/auth/google/callback`. Écran de consentement : nom Piochéo, champs d'application `openid`, `email`, `profile`. Tant que l'identifiant et le secret ne sont pas remplis, le bouton renvoie vers la connexion avec un message.
 
-`piocheo-web` :
-
-```
-# Variable de build (cocher « Build Variable » dans Coolify)
-VUE_APP_API_URL=https://api.piocheo.com
-# Variable d'exécution, pour la CSP
-PIOCHEO_API_ORIGIN=https://api.piocheo.com
-```
-
-Option de build : `VUE_APP_PILOT_CITY=Tournai`.
-
-`PIOCHEO_TRUST_PROXY=1` correspond à Traefik (Coolify) devant l'API. Avec cette valeur, la limite de tentatives de connexion s'applique par visiteur, et le cookie `Secure` reconnaît le HTTPS. Si l'on passe plutôt par le relais `/api` du front (sans `VUE_APP_API_URL`, avec `PIOCHEO_API_UPSTREAM` vers le nom interne de l'API), utiliser `2`.
+`piocheo-web` : aucune variable. L'adresse de l'API est dans `.env.production` et dans la CSP de Nginx, comme sur Wayd. Option de build : `VUE_APP_PILOT_CITY=Tournai`.
 
 ## Mise en ligne
 

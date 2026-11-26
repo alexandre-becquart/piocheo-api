@@ -9,10 +9,10 @@ Créer un projet Coolify « Piochéo » avec trois ressources sur le même VPS.
 | Ressource | Type | Source | Réseau |
 | --- | --- | --- | --- |
 | `piocheo-db` | Base MongoDB 7 ou 8 | Image officielle | Interne uniquement, aucun port publié |
-| `piocheo-api` | Application Dockerfile | `alexandre-becquart/piocheo-api`, branche `main`, port 3100 | Interne uniquement, pas de domaine public |
-| `piocheo-web` | Application Dockerfile | `alexandre-becquart/piocheo-web`, branche `main`, port 80 | Domaine public en HTTPS |
+| `piocheo-api` | Application Dockerfile | `alexandre-becquart/piocheo-api`, branche `main`, port 3100 | `https://api.piocheo.com` |
+| `piocheo-web` | Application Dockerfile | `alexandre-becquart/piocheo-web`, branche `main`, port 80 | `https://piocheo.com` |
 
-Le front sert l'application et relaie `/api` vers l'API par le réseau interne. Le navigateur ne parle qu'à une seule origine, ce qui évite les problèmes de CORS et garde le cookie de session en `SameSite=Lax`.
+Comme Wayd (`getwayd.com` et `api.getwayd.com`), le front et l'API ont chacun leur domaine. Les deux sont sur le même site `piocheo.com` : le cookie de session `SameSite=Lax` est envoyé aux appels du front vers l'API, et l'API n'accepte que l'origine `https://piocheo.com`.
 
 ## Variables d'environnement
 
@@ -24,27 +24,31 @@ PORT=3100
 HOST=0.0.0.0
 PIOCHEO_MONGODB_URI=<URL interne de piocheo-db, base piocheo>
 PIOCHEO_JWT_SECRET=<openssl rand -hex 32, propre à Piochéo>
-PIOCHEO_WEB_ORIGINS=https://<domaine du front>
-PIOCHEO_TRUST_PROXY=2
+PIOCHEO_WEB_ORIGINS=https://piocheo.com
+PIOCHEO_TRUST_PROXY=1
 ```
 
 `piocheo-web` :
 
 ```
-PIOCHEO_API_UPSTREAM=http://<nom interne de piocheo-api>:3100
+# Variable de build (cocher « Build Variable » dans Coolify)
+VUE_APP_API_URL=https://api.piocheo.com
+# Variable d'exécution, pour la CSP
+PIOCHEO_API_ORIGIN=https://api.piocheo.com
 ```
 
 Option de build : `VUE_APP_PILOT_CITY=Tournai`.
 
-`PIOCHEO_TRUST_PROXY=2` correspond à Traefik (Coolify) puis au Nginx du front. Avec cette valeur, la limite de tentatives de connexion s'applique par visiteur et non au conteneur Nginx, et le cookie `Secure` reconnaît le HTTPS.
+`PIOCHEO_TRUST_PROXY=1` correspond à Traefik (Coolify) devant l'API. Avec cette valeur, la limite de tentatives de connexion s'applique par visiteur, et le cookie `Secure` reconnaît le HTTPS. Si l'on passe plutôt par le relais `/api` du front (sans `VUE_APP_API_URL`, avec `PIOCHEO_API_UPSTREAM` vers le nom interne de l'API), utiliser `2`.
 
 ## Mise en ligne
 
-1. Créer `piocheo-db`, puis noter son URL interne.
-2. Créer `piocheo-api` avec les variables ci-dessus et vérifier `/health` depuis le terminal Coolify du conteneur.
-3. Créer `piocheo-web`, lui attribuer le domaine et activer le certificat HTTPS.
-4. Créer le premier compte organisateur, puis lui donner le rôle `organizer` en base. Le seed de démonstration refuse la production et ne doit pas y être lancé.
-5. Activer les sauvegardes planifiées Coolify sur `piocheo-db`, comme pour `Wayd-DB`.
+1. Chez le registraire de `piocheo.com`, faire pointer `piocheo.com` et `api.piocheo.com` (enregistrements A) vers l'IP du VPS OVH.
+2. Créer `piocheo-db`, puis noter son URL interne.
+3. Créer `piocheo-api` avec les variables ci-dessus et le domaine `https://api.piocheo.com`, puis vérifier `https://api.piocheo.com/health`.
+4. Créer `piocheo-web` avec le domaine `https://piocheo.com`. Coolify génère les certificats HTTPS.
+5. Créer le premier compte organisateur, puis lui donner le rôle `organizer` en base. Le seed de démonstration refuse la production et ne doit pas y être lancé.
+6. Activer les sauvegardes planifiées Coolify sur `piocheo-db`, comme pour `Wayd-DB`.
 
 ## Données personnelles
 

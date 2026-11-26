@@ -8,6 +8,7 @@ const { id, label, date, input, lookupId } = require('../_helpers/validation')
 const { cityCollation, equal } = require('../_helpers/queries')
 const mongoose = require('mongoose')
 const tableScope = require('../_helpers/tableScope')
+const { notify } = require('../services/notifications')
 
 const roomAvailable = { $lt: [
   { $size: { $filter: { input: '$members', as: 'member', cond: { $eq: ['$$member.status', 'accepted'] } } } },
@@ -74,6 +75,10 @@ async function requestSeat(req, res) {
     _id: table._id, visibility: 'open', starts: { $gt: new Date() }, 'members.user': { $ne: req.user._id }, $expr: roomAvailable,
   }, { $push: { members: { user: req.user._id, name: req.user.name, status: 'pending' } } })
   if (!updated.modifiedCount) throw fail(409, 'Cette demande est indisponible ou déjà enregistrée.')
+  await notify([table.host], {
+    kind: 'seat.requested', link: '/tables/' + table._id,
+    text: `${req.user.name} demande une place à ta table ${table.game.name}.`,
+  }, req.user._id)
   res.sendStatus(204)
 }
 
@@ -87,6 +92,10 @@ async function invite(req, res) {
     _id: table._id, starts: { $gt: new Date() }, 'members.user': { $ne: invited._id },
   }, { $push: { members: { user: invited._id, name: invited.name, status: 'invited' } } })
   if (!updated.modifiedCount) throw fail(409, 'Cette invitation est indisponible ou déjà envoyée.')
+  await notify([invited._id], {
+    kind: 'table.invited', link: '/tables/' + table._id,
+    text: `${req.user.name} t’invite à sa table privée ${table.game.name}.`,
+  }, req.user._id)
   res.sendStatus(204)
 }
 
@@ -104,6 +113,14 @@ async function reply(req, res) {
   if (accept) filter.$expr = roomAvailable
   const updated = await Table.updateOne(filter, { $set: { 'members.$.status': accept ? 'accepted' : 'declined' } })
   if (!updated.modifiedCount) throw fail(409, 'La table est complète ou cette réponse a déjà été traitée.')
+  const answer = accept ? 'accepté' : 'décliné'
+  await notify([hostReply ? target : table.host], hostReply ? {
+    kind: accept ? 'seat.accepted' : 'seat.declined', link: '/tables/' + table._id,
+    text: accept ? `Ta place à la table ${table.game.name} est réservée.` : `Ta demande pour la table ${table.game.name} n’a pas été retenue.`,
+  } : {
+    kind: accept ? 'invite.accepted' : 'invite.declined', link: '/tables/' + table._id,
+    text: `${req.user.name} a ${answer} ton invitation à la table ${table.game.name}.`,
+  }, req.user._id)
   res.sendStatus(204)
 }
 

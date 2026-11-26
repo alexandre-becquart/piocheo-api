@@ -103,6 +103,10 @@ test('Parcours Piochéo avec MongoDB', async t => {
     assert.deepEqual(reactions.map(response => response.status).sort(), [204,409])
     const ranking = (await host.get('/rankings').query({game:String(game._id),city}).expect(200)).body
     assert.deepEqual(ranking.items.map(item => item.points), [3,1])
+    assert.equal(ranking.confirmed, 1)
+    const busiest = (await anonymous.get('/rankings').query({city}).expect(200)).body
+    assert.equal(busiest.game, String(game._id))
+    assert.equal((await anonymous.get('/rankings').query({city:'Ville sans partie'}).expect(200)).body.game, null)
     assert.equal(ranking.personal.user, cam.id)
     const draft = { game:String(game._id),city,visibility:'open',entries:[{user:cam.id,score:8},{user:sam.id,score:8}] }
     const contested = (await host.post('/results').send(draft).expect(201)).body.id
@@ -135,5 +139,30 @@ test('Parcours Piochéo avec MongoDB', async t => {
     await guest.post('/tables/' + linked + '/request').expect(204)
     await host.post('/tables/' + linked + '/reply').send({user:sam.id,accept:true}).expect(204)
     assert.equal((await guest.get('/tables/' + linked).expect(200)).body.membership, 'accepted')
+  })
+
+  await t.test('notifications nominatives sans fuite des tables privées', async () => {
+    await anonymous.get('/notifications').expect(401)
+    const hostFeed = (await host.get('/notifications').expect(200)).body
+    const kinds = feed => feed.items.map(item => item.kind)
+    assert.ok(kinds(hostFeed).filter(kind => kind === 'seat.requested').length >= 3)
+    assert.ok(kinds(hostFeed).includes('invite.accepted'))
+    assert.ok(kinds(hostFeed).includes('result.confirmed'))
+    assert.ok(kinds(hostFeed).includes('result.contested'))
+    const guestFeed = (await guest.get('/notifications').expect(200)).body
+    assert.ok(kinds(guestFeed).includes('table.invited'))
+    assert.ok(kinds(guestFeed).includes('result.pending'))
+    assert.ok(guestFeed.items.some(item => item.link === '/tables/' + privateId))
+    const otherFeed = (await other.get('/notifications').expect(200)).body
+    assert.ok(!otherFeed.items.some(item => item.link === '/tables/' + privateId))
+    assert.ok(!kinds(otherFeed).includes('table.invited'))
+    assert.ok(otherFeed.items.every(item => item.user === undefined))
+    assert.ok(guestFeed.unread > 0)
+    await other.post('/notifications/read').send({ ids: guestFeed.items.map(item => item._id) }).expect(204)
+    assert.equal((await guest.get('/notifications').expect(200)).body.unread, guestFeed.unread)
+    await guest.post('/notifications/read').send({ ids: [guestFeed.items[0]._id] }).expect(204)
+    assert.equal((await guest.get('/notifications').expect(200)).body.unread, guestFeed.unread - 1)
+    await guest.post('/notifications/read').send({}).expect(204)
+    assert.equal((await guest.get('/notifications').expect(200)).body.unread, 0)
   })
 })

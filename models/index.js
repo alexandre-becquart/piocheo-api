@@ -5,4 +5,5 @@ module.exports = {
   Table: require('./Table'),
   Event: require('./Event'),
   Result: require('./Result'),
+  Notification: require('./Notification'),
 }

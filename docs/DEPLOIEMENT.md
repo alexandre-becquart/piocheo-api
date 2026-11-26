@@ -26,7 +26,17 @@ PIOCHEO_MONGODB_URI=<URL interne de piocheo-db, base piocheo>
 PIOCHEO_JWT_SECRET=<openssl rand -hex 32, propre à Piochéo>
 PIOCHEO_WEB_ORIGINS=https://piocheo.com
 PIOCHEO_TRUST_PROXY=1
+RESEND_API_KEY=<clé Resend, domaine piocheo.com vérifié>
+EMAIL_FROM=Piochéo <noreply@piocheo.com>
+PIOCHEO_GOOGLE_CLIENT_ID=<identifiant client OAuth Google>
+PIOCHEO_GOOGLE_CLIENT_SECRET=<secret client OAuth Google>
+PIOCHEO_GOOGLE_CALLBACK_URL=https://api.piocheo.com/auth/google/callback
 ```
+
+### Connexion (comme Wayd)
+
+- **Mot de passe oublié** : l'e-mail part par Resend, comme pour Wayd. Ajouter le domaine `piocheo.com` dans Resend (enregistrements DNS SPF/DKIM chez le registraire), puis créer une clé d'API propre à Piochéo. Sans `RESEND_API_KEY`, la demande répond normalement mais aucun e-mail ne part (le journal l'indique).
+- **Continuer avec Google** : dans Google Cloud Console, créer un identifiant OAuth « Application Web » pour Piochéo. Origine JavaScript autorisée : `https://piocheo.com`. URI de redirection autorisée : `https://api.piocheo.com/auth/google/callback`. Écran de consentement : nom Piochéo, champs d'application `openid`, `email`, `profile`. Tant que les trois variables Google ne sont pas remplies, le bouton renvoie vers la connexion avec un message.
 
 `piocheo-web` :
 

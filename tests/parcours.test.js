@@ -26,7 +26,7 @@ test('Parcours Piochéo avec MongoDB', async t => {
   const [cam, sam, lou] = await Promise.all([
     [host, 'Camille', 'cam'], [guest, 'Sam', 'sam'], [other, 'Lou', 'lou'],
   ].map(async ([agent, name, handle]) => (await agent.post('/auth/register').send({
-    name, email: handle + '@example.test', password,
+    firstName: name, lastName: 'Test', email: handle + '@example.test', password,
   }).expect(201)).body))
   await User.updateOne({ _id: cam.id }, { $set: { role: 'organizer' } })
   const game = await Game.create({
@@ -53,7 +53,7 @@ test('Parcours Piochéo avec MongoDB', async t => {
     await request(production).get('/games').set('Origin', 'https://piocheo.example').expect(200)
     const proxied = createApp({ secret: randomUUID(), allowedOrigins: ['https://piocheo.com'], production: true, trustProxy: 1 })
     const secure = await request(proxied).post('/auth/register').set('Origin', 'https://piocheo.com').set('Sec-Fetch-Site', 'same-site')
-      .set('X-Forwarded-Proto', 'https').set('X-Forwarded-For', '203.0.113.9').send({ name: 'Proxy', email: 'proxy@example.test', password })
+      .set('X-Forwarded-Proto', 'https').set('X-Forwarded-For', '203.0.113.9').send({ firstName: 'Proxy', lastName: 'Test', email: 'proxy@example.test', password })
     assert.equal(secure.status, 201)
     assert.equal(secure.headers['access-control-allow-origin'], 'https://piocheo.com')
     assert.equal(secure.headers['access-control-allow-credentials'], 'true')

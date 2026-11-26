@@ -2,6 +2,8 @@ require('dotenv').config()
 const mongoose = require('mongoose')
 const { createApp } = require('./app')
 const models = require('./models')
+const { createMailer } = require('./services/mailer')
+const { createGoogle } = require('./services/google')
 
 async function main() {
   const app = createApp({
@@ -9,6 +11,8 @@ async function main() {
     allowedOrigins: (process.env.PIOCHEO_WEB_ORIGINS || 'http://localhost:8080').split(',').map(value => value.trim()),
     production: process.env.NODE_ENV === 'production',
     trustProxy: Number(process.env.PIOCHEO_TRUST_PROXY || 0),
+    google: createGoogle(),
+    mailer: createMailer(),
   })
   if (!process.env.PIOCHEO_MONGODB_URI) throw new Error('Configure PIOCHEO_MONGODB_URI.')
   await mongoose.connect(process.env.PIOCHEO_MONGODB_URI)

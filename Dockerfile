@@ -11,7 +11,8 @@ COPY controllers/ ./controllers/
 COPY models/ ./models/
 COPY routes/ ./routes/
 COPY services/ ./services/
-RUN chmod -R a+rX _helpers _middleware controllers models routes services
+COPY templates/ ./templates/
+RUN chmod -R a+rX _helpers _middleware controllers models routes services templates
 ENV HOST=0.0.0.0
 USER node
 EXPOSE 3100

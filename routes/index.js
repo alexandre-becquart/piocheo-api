@@ -11,11 +11,12 @@ const results = require('./collections/results')
 const rankings = require('./collections/rankings')
 const notifications = require('./collections/notifications')
 
-function routes({ secret, production }) {
+function routes(options) {
+  const { secret } = options
   const router = express.Router()
   router.use('/health', health)
   router.use(authenticateWith(secret))
-  router.use('/auth', auth(secret, production))
+  router.use('/auth', auth(options))
   router.use('/people', people)
   router.use('/circle', circle)
   router.use('/games', games)

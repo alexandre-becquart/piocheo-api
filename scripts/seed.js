@@ -1,7 +1,7 @@
 require('dotenv').config()
 const mongoose = require('mongoose')
 const bcrypt = require('bcryptjs')
-const { User, Game, Table, Event, Review } = require('./models')
+const { User, Game, Table, Event, Review } = require('../models')
 
 const games = [
   ['cartographes', 'Les Cartographes', 'Dessine les vallées, les villages et les forêts d’un territoire à explorer. Chaque saison te lance un nouveau défi.', 2, 8, 35, 'Stratégie', 'points', 'high', 'indigo', '✦'],

@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict')
 const { test } = require('node:test')
-const { standings, VERSION } = require('../ranking')
+const { standings, VERSION } = require('../services/ranking')
 
 const base = {
   status: 'confirmed',

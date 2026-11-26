@@ -28,10 +28,14 @@ Le seed fournit quatre jeux fictifs, un avis, une table ouverte et une soirée. 
 
 - L’organisateur occupe une place. Une demande ouverte passe par son acceptation. Une table privée requiert une invitation nominative. Le cercle facilite la sélection des invités. L’adresse détaillée est réservée aux personnes confirmées.
 - Un résultat lié à une table reprend ses participants confirmés après le début du créneau. Pour une partie improvisée, l’auteur saisit les comptes ou les noms d’invités. Le premier participant identifié autre que l’auteur peut confirmer ou contester. Une partie dont seul l’auteur a un compte reste dans son historique privé.
-- Le service `ranking.js` applique le barème provisoire `demo-v1`. Une partie ouverte confirmée attribue 3 points aux meilleurs scores ou places, ex æquo compris, et 1 point aux autres comptes. Les parties privées, contestées et coopératives restent dans l’historique. Le classement est calculé depuis les résultats confirmés, avec une transition atomique par résultat.
+- Le service `services/ranking.js` applique le barème provisoire `demo-v1`. Une partie ouverte confirmée attribue 3 points aux meilleurs scores ou places, ex æquo compris, et 1 point aux autres comptes. Les parties privées, contestées et coopératives restent dans l’historique. Le classement est calculé depuis les résultats confirmés, avec une transition atomique par résultat.
 - La création d’événements nécessite le rôle organisateur. L’inscription à un événement et la réservation d’une table sont deux actions indépendantes.
 - L’interface utilise l’heure de Bruxelles. Pour les clients externes, les dates envoyées à l’API doivent inclure un décalage ou le suffixe UTC `Z`.
 - À décider pour le produit. Le barème définitif, le processus après une contestation, l’éligibilité des parties privées et coopératives, et l’attribution du rôle organisateur au-delà de la démo.
+
+## Structure
+
+`server.js` démarre le serveur et `app.js` configure Express. Le point d’entrée `routes/index.js` monte les routes de `routes/collections/`. Les contrôleurs gèrent les requêtes, les modèles Mongoose vivent dans `models/` et le barème dans `services/`. Les middlewares d’authentification et d’erreur sont dans `_middleware/`. Le seed se trouve dans `scripts/`.
 
 ## Réemploi Wayd
 
@@ -42,7 +46,7 @@ Le verrou Piochéo intègre les correctifs signalés par l’audit des dépendan
 | Source | Adaptation Piocheo |
 | --- | --- |
 | `package.json`, `package-lock.json`, `Dockerfile`, `.github/workflows/tests.yml` | Sous-ensemble verrouillé des dépendances Express, Mongoose et Supertest, image Node et contrôle CI. Les tests utilisent le runner Node avec un MongoDB de test. |
-| `app.js`, `_helpers/corsOrigins.js`, `_middleware/error-handler.js` | Protections Helmet et Mongo, origines exactes et traitement centralisé des erreurs dans `app.js`. |
+| `app.js`, `_helpers/corsOrigins.js`, `_middleware/error-handler.js` | Protections Helmet et Mongo, origines exactes dans `app.js` et traitement centralisé dans `_middleware/error-handler.js`. |
 | `routes/collections/auth.js`, `controllers/authController.js` | Validation Joi, mots de passe bcrypt et session JWT par cookie HttpOnly. La version locale utilise un cookie de session à durée limitée. |
 | `controllers/disponibiliteController.js`, `_helpers/demandeJeu.js`, `controllers/resultatController.js` | Parcours demande, acceptation et décision repris comme conventions. Les modèles Piochéo couvrent plusieurs participants, les ex æquo, les résultats coopératifs et la capacité atomique. |
 

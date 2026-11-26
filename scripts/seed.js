@@ -36,7 +36,10 @@ async function main() {
     ['camille@example.test', 'Camille', 'organizer'], ['sam@example.test', 'Sam', 'player'],
     ['lea@example.test', 'Léa', 'player'], ['thomas@example.test', 'Thomas', 'player'],
     ['nora@example.test', 'Nora', 'player'], ['hugo@example.test', 'Hugo', 'player'],
-  ].map(([email, name, role]) => User.findOneAndUpdate({ email }, { $setOnInsert: { email, name, role, password } }, { upsert: true, returnDocument: 'after' })))
+  ].map(([email, name, role]) => User.findOneAndUpdate({ email }, {
+    $setOnInsert: { email, role, password },
+    $set: { name, firstName: name, lastName: 'Démo', username: email.split('@')[0] },
+  }, { upsert: true, returnDocument: 'after' })))
   const [organizer, player, lea, thomas, nora, hugo] = people
   await User.updateOne({ _id: organizer._id }, { $addToSet: { circle: { $each: [player._id, lea._id] } } })
   await User.updateOne({ _id: player._id }, { $addToSet: { circle: organizer._id } })

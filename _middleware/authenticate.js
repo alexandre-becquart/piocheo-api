@@ -12,7 +12,9 @@ function authenticateWith(secret) {
       return next()
     }
     try {
-      req.user = await User.findById(session.sub).lean()
+      const user = await User.findById(session.sub).lean()
+      // Sessions coupées par une réinitialisation du mot de passe ou une liaison Google.
+      if (user && (session.ver || 0) === (user.sessionVersion || 0)) req.user = user
       next()
     } catch (error) {
       next(error)

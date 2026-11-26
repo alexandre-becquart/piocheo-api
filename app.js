@@ -6,6 +6,7 @@ const mongoSanitize = require('express-mongo-sanitize')
 const { fail, missing } = require('./_helpers/http')
 const errorHandler = require('./_middleware/error-handler')
 const routes = require('./routes')
+const { createMailer } = require('./services/mailer')
 
 // En développement, le front peut être ouvert via localhost, 127.0.0.1 ou l’adresse réseau
 // affichée par Vue CLI (test sur téléphone). En production, seules les origines exactes passent.
@@ -19,7 +20,7 @@ function localOrigin(origin) {
   }
 }
 
-function createApp({ secret, allowedOrigins, production = false, trustProxy = 0 }) {
+function createApp({ secret, allowedOrigins, production = false, trustProxy = 0, google = { client: null }, mailer = createMailer({}) }) {
   if (!secret || secret.length < 32) throw new Error('PIOCHEO_JWT_SECRET doit contenir au moins 32 caractères.')
   const app = express()
   const exact = new Set(allowedOrigins)
@@ -44,7 +45,7 @@ function createApp({ secret, allowedOrigins, production = false, trustProxy = 0 
     next()
   })
 
-  app.use(routes({ secret, production }))
+  app.use(routes({ secret, production, webOrigin: allowedOrigins[0], mailer, google }))
   app.use((_req, _res, next) => next(missing()))
   app.use(errorHandler)
   return app

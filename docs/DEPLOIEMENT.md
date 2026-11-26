@@ -51,7 +51,7 @@ Les anciennes variables `PIOCHEO_WEB_ORIGINS=https://piocheo.com`, `PIOCHEO_TRUS
 
 1. Chez le registraire de `piocheo.com`, faire pointer `piocheo.com` et `api.piocheo.com` (enregistrements A) vers l'IP du VPS OVH.
 2. Créer `piocheo-db`, puis noter son URL interne.
-3. Créer `piocheo-api` avec les variables ci-dessus et le domaine `https://api.piocheo.com`, puis vérifier `https://api.piocheo.com/health`.
+3. Créer `piocheo-api` avec les variables ci-dessus et le domaine `https://api.piocheo.com`, puis vérifier `https://api.piocheo.com/health`. Au premier démarrage, l’API ajoute les 100 jeux du catalogue de lancement (le journal Coolify affiche « Catalogue : 100 jeux ajoutés sur 100. »). Les démarrages suivants n’ajoutent que les jeux manquants et ne modifient jamais une fiche existante.
 4. Créer `piocheo-web` avec le domaine `https://piocheo.com`. Coolify génère les certificats HTTPS.
 5. Créer le premier compte organisateur, puis lui donner le rôle `organizer` en base. Le seed de démonstration refuse la production et ne doit pas y être lancé.
 6. Activer les sauvegardes planifiées Coolify sur `piocheo-db`, comme pour `Wayd-DB`.

@@ -5,6 +5,7 @@ const models = require('./models')
 const { createMailer } = require('./services/mailer')
 const { createGoogle } = require('./services/google')
 const { envOrigins } = require('./_helpers/corsOrigins')
+const { importCatalogue } = require('./services/catalogue')
 
 // Comme Wayd : les adresses de production (piocheo.com, api.piocheo.com) sont dans le code.
 // Coolify n'a à fournir que les secrets (JWT, MongoDB, Google, Resend).
@@ -23,6 +24,15 @@ async function main() {
   if (!process.env.PIOCHEO_MONGODB_URI) throw new Error('Configure PIOCHEO_MONGODB_URI.')
   await mongoose.connect(process.env.PIOCHEO_MONGODB_URI)
   await Promise.all(Object.values(models).map(model => model.init()))
+  // Ajoute au démarrage les jeux du catalogue qui manquent (sans toucher aux fiches existantes).
+  if (process.env.PIOCHEO_IMPORT_CATALOGUE !== 'false') {
+    try {
+      const { added, total } = await importCatalogue()
+      if (added) console.log(`Catalogue : ${added} jeux ajoutés sur ${total}.`)
+    } catch (error) {
+      console.error(`Import du catalogue impossible : ${error.message}`)
+    }
+  }
   app.listen(Number(process.env.PORT || 3100), process.env.HOST || '127.0.0.1', () => {
     console.log(`API Piochéo démarrée (${production ? 'production' : 'développement'}). Google : ${google.client ? google.callback : 'non configuré'}.`)
   })

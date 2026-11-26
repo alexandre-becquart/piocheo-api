@@ -20,9 +20,18 @@ function localOrigin(origin) {
   }
 }
 
+// « https://piocheo.com/ » ou « https://piocheo.com/connexion » saisis dans Coolify valent « https://piocheo.com » :
+// le navigateur envoie toujours l'origine seule, sans barre finale ni chemin.
+function normalizeOrigins(values) {
+  return values.map(value => String(value).trim()).filter(Boolean).map(value => {
+    try { return new URL(value).origin } catch { return value }
+  })
+}
+
 function createApp({ secret, allowedOrigins, production = false, trustProxy = 0, google = { client: null }, mailer = createMailer({}) }) {
   if (!secret || secret.length < 32) throw new Error('PIOCHEO_JWT_SECRET doit contenir au moins 32 caractères.')
   const app = express()
+  allowedOrigins = normalizeOrigins(allowedOrigins)
   const exact = new Set(allowedOrigins)
   const origins = { has: origin => exact.has(origin) || (!production && Boolean(origin) && localOrigin(origin)) }
   app.disable('x-powered-by')
@@ -35,6 +44,7 @@ function createApp({ secret, allowedOrigins, production = false, trustProxy = 0,
   })
   app.use(cors({ credentials: true, origin(origin, done) {
     if (!origin || origins.has(origin)) return done(null, true)
+    console.warn(`Origine refusée : ${origin} (autorisées : ${allowedOrigins.join(', ')})`)
     done(fail(403, 'Origine non autorisée.'))
   } }))
   app.use(express.json({ limit: '32kb' }), cookieParser(), mongoSanitize())
@@ -51,4 +61,4 @@ function createApp({ secret, allowedOrigins, production = false, trustProxy = 0,
   return app
 }
 
-module.exports = { createApp }
+module.exports = { createApp, normalizeOrigins }

@@ -51,6 +51,9 @@ test('Parcours Piochéo avec MongoDB', async t => {
     const production = createApp({ secret: randomUUID(), allowedOrigins: ['https://piocheo.example'], production: true })
     await request(production).get('/games').set('Origin', 'http://127.0.0.1:8081').expect(403)
     await request(production).get('/games').set('Origin', 'https://piocheo.example').expect(200)
+    // Une barre finale saisie dans PIOCHEO_WEB_ORIGINS ne doit pas bloquer les inscriptions.
+    const trailing = createApp({ secret: randomUUID(), allowedOrigins: [' https://piocheo.example/ '], production: true })
+    await request(trailing).post('/auth/logout').set('Origin', 'https://piocheo.example').expect(200)
     const proxied = createApp({ secret: randomUUID(), allowedOrigins: ['https://piocheo.com'], production: true, trustProxy: 1 })
     const secure = await request(proxied).post('/auth/register').set('Origin', 'https://piocheo.com').set('Sec-Fetch-Site', 'same-site')
       .set('X-Forwarded-Proto', 'https').set('X-Forwarded-For', '203.0.113.9').send({ firstName: 'Proxy', lastName: 'Test', email: 'proxy@example.test', password })

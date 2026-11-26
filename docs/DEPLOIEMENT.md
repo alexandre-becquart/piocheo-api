@@ -33,6 +33,16 @@ PIOCHEO_GOOGLE_CLIENT_SECRET=<secret client OAuth Google>
 PIOCHEO_GOOGLE_CALLBACK_URL=https://api.piocheo.com/auth/google/callback
 ```
 
+### Si la connexion échoue en ligne
+
+| Symptôme | Cause | Réglage |
+| --- | --- | --- |
+| Inscription ou connexion : `403 Forbidden` (« Origine non autorisée ») | `PIOCHEO_WEB_ORIGINS` absent ou différent de l'adresse du site | `PIOCHEO_WEB_ORIGINS=https://piocheo.com` sur `piocheo-api` (ajouter `,https://www.piocheo.com` si le site répond aussi en www), puis redéployer. Le journal de l'API affiche les origines autorisées au démarrage et chaque origine refusée. |
+| « Continuer avec Google » finit sur `localhost` | Même cause : l'API renvoie vers la première origine de `PIOCHEO_WEB_ORIGINS`, `http://localhost:8080` par défaut | Même réglage. Vérifier aussi que `PIOCHEO_GOOGLE_CALLBACK_URL` vaut `https://api.piocheo.com/auth/google/callback` et non la valeur locale de `.env.example`. |
+| Les appels partent vers `https://piocheo.com/api/…` au lieu de `https://api.piocheo.com/…` | `VUE_APP_API_URL` n'a pas été fournie au build | Sur `piocheo-web`, cocher « Build Variable » pour `VUE_APP_API_URL`, puis redéployer. Le relais `/api` fonctionne aussi, mais il faut alors `PIOCHEO_TRUST_PROXY=2` sur l'API. |
+
+Depuis cette version, l'API refuse de démarrer en production sans `PIOCHEO_WEB_ORIGINS`, pour que l'oubli se voie tout de suite.
+
 ### Connexion (comme Wayd)
 
 - **Mot de passe oublié** : l'e-mail part par Resend, comme pour Wayd. Ajouter le domaine `piocheo.com` dans Resend (enregistrements DNS SPF/DKIM chez le registraire), puis créer une clé d'API propre à Piochéo. Sans `RESEND_API_KEY`, la demande répond normalement mais aucun e-mail ne part (le journal l'indique).

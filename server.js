@@ -6,10 +6,13 @@ const { createMailer } = require('./services/mailer')
 const { createGoogle } = require('./services/google')
 
 async function main() {
+  const production = process.env.NODE_ENV === 'production'
+  // En production, sans PIOCHEO_WEB_ORIGINS, toutes les inscriptions et connexions seraient refusées (403).
+  if (production && !process.env.PIOCHEO_WEB_ORIGINS) throw new Error('Configure PIOCHEO_WEB_ORIGINS (ex. https://piocheo.com).')
   const app = createApp({
     secret: process.env.PIOCHEO_JWT_SECRET,
     allowedOrigins: (process.env.PIOCHEO_WEB_ORIGINS || 'http://localhost:8080').split(',').map(value => value.trim()),
-    production: process.env.NODE_ENV === 'production',
+    production,
     trustProxy: Number(process.env.PIOCHEO_TRUST_PROXY || 0),
     google: createGoogle(),
     mailer: createMailer(),
@@ -18,7 +21,7 @@ async function main() {
   await mongoose.connect(process.env.PIOCHEO_MONGODB_URI)
   await Promise.all(Object.values(models).map(model => model.init()))
   app.listen(Number(process.env.PORT || 3100), process.env.HOST || '127.0.0.1', () => {
-    console.log('API Piochéo démarrée.')
+    console.log(`API Piochéo démarrée. Origines autorisées : ${(process.env.PIOCHEO_WEB_ORIGINS || 'http://localhost:8080')}`)
   })
 }
 

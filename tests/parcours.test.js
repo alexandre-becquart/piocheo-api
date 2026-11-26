@@ -111,6 +111,12 @@ test('Parcours Piochéo avec MongoDB', async t => {
     assert.equal(invitation.body.address, undefined)
     await guest.post(url + '/reply').send({accept:true}).expect(204)
     assert.equal((await guest.get(url).expect(200)).body.address, dataTable.address)
+    // Agenda de Mon espace : la table privée acceptée et la table ouverte, sans les tables des autres.
+    const mine = (await guest.get('/tables').query({view:'mine'}).expect(200)).body
+    assert.ok(mine.some(table => table._id === privateId && table.membership === 'accepted'))
+    assert.ok(mine.every(table => table.membership || String(table.host) === sam.id))
+    assert.ok((await host.get('/tables').query({view:'mine'}).expect(200)).body.some(table => table._id === openId))
+    await anonymous.get('/tables').query({view:'mine'}).expect(401)
   })
 
   await t.test('résultats liés, confirmation idempotente, contestation et historique', async () => {
@@ -137,6 +143,7 @@ test('Parcours Piochéo avec MongoDB', async t => {
     assert.equal(busiest.game, String(game._id))
     assert.equal((await anonymous.get('/rankings').query({city:'Ville sans partie'}).expect(200)).body.game, null)
     assert.equal(ranking.personal.user, cam.id)
+    assert.equal((await host.get('/auth/me').expect(200)).body.city, city)
     const draft = { game:String(game._id),city,visibility:'open',entries:[{user:cam.id,score:8},{user:sam.id,score:8}] }
     const contested = (await host.post('/results').send(draft).expect(201)).body.id
     await guest.post('/results/' + contested + '/decision').send({confirm:false}).expect(204)

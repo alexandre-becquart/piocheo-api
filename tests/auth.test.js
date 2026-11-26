@@ -63,7 +63,9 @@ test('Connexion reprise de Wayd', async t => {
   await t.test('connexion par e-mail ou par pseudo', async () => {
     const agent = request.agent(app)
     await agent.post('/auth/login').send({ email: 'MeepleQueen', password }).expect(200)
-    assert.equal((await agent.get('/auth/me').expect(200)).body.username, 'meeplequeen')
+    const fresh = (await agent.get('/auth/me').expect(200)).body
+    assert.equal(fresh.username, 'meeplequeen')
+    assert.equal(fresh.city, null)
     const byEmail = await anonymous.post('/auth/login').send({ email: 'MARGAUX@example.test', password }).expect(200)
     assert.match(byEmail.headers['set-cookie'][0], /Max-Age=604800/)
     assert.equal((await anonymous.post('/auth/login').send({ email: 'meeplequeen', password: 'mauvais-mot' }).expect(401)).body.message, 'Identifiant ou mot de passe incorrect')

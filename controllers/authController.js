@@ -7,7 +7,9 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const Joi = require('joi')
 const User = require('../models/User')
-const { fail } = require('../_helpers/http')
+const Result = require('../models/Result')
+const Table = require('../models/Table')
+const { fail, wrap } = require('../_helpers/http')
 const { input } = require('../_helpers/validation')
 const { isValidEmailFormat } = require('../_helpers/emailValidation')
 
@@ -213,6 +215,14 @@ function authController({ secret, production, webOrigin, mailer, google }) {
   return { checkUsername, register, login, logout, forgotPassword, resetPassword, googleRedirect, googleCallback }
 }
 
-const me = (req, res) => res.json(profile(req.user))
+// Le compte ne stocke pas de ville : Mon espace affiche celle des dernières parties du joueur, si elle existe.
+async function playedCity(user) {
+  const result = await Result.findOne({ 'entries.user': user._id, city: { $nin: [null, ''] } }).sort('-played').select('city').lean()
+  if (result) return result.city
+  const table = await Table.findOne({ members: { $elemMatch: { user: user._id, status: 'accepted' } } }).sort('-starts').select('city').lean()
+  return table?.city || null
+}
+
+const me = wrap(async (req, res) => res.json({ ...profile(req.user), city: await playedCity(req.user) }))
 
 module.exports = { authController, me }

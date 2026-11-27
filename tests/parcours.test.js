@@ -154,6 +154,17 @@ test('Parcours Piochéo avec MongoDB', async t => {
     assert.equal((await host.get('/games').query({ranked:'true',city,type:game.type === 'Ambiance' ? 'Famille' : 'Ambiance'}).expect(200)).body.total, 0)
     await anonymous.get('/games').query({ranked:'true',city}).expect(401)
     await host.get('/games').query({ranked:'true'}).expect(400)
+    const extra = await Game.create([['eclipse-tests', 'Éclipse tests', 'Famille'], ['7-tests', '7 tests', 'Ambiance']].map(([slug, name, type]) => ({
+      slug, name, type, description: 'Fiche synthétique.', minPlayers: 2, maxPlayers: 4, minutes: 30, scoring: 'points', direction: 'high' })))
+    assert.deepEqual((await anonymous.get('/games').expect(200)).body.letters, ['#', 'C', 'E'])
+    const byLetter = (await anonymous.get('/games').query({letter:'e'}).expect(200)).body
+    assert.deepEqual(byLetter.items.map(item => item.name), ['Éclipse tests'])
+    assert.deepEqual(byLetter.letters, ['#', 'C', 'E'])
+    assert.equal((await anonymous.get('/games').query({letter:'#'}).expect(200)).body.items[0].name, '7 tests')
+    assert.equal((await anonymous.get('/games').query({letter:'E',type:'Ambiance'}).expect(200)).body.total, 0)
+    assert.deepEqual((await anonymous.get('/games').query({type:'Ambiance'}).expect(200)).body.letters, ['#'])
+    await Game.deleteMany({ _id: { $in: extra.map(item => item._id) } })
+    await anonymous.get('/games').query({letter:'AB'}).expect(400)
     const draft = { game:String(game._id),city,visibility:'open',entries:[{user:cam.id,score:8},{user:sam.id,score:8}] }
     const contested = (await host.post('/results').send(draft).expect(201)).body.id
     await guest.post('/results/' + contested + '/decision').send({confirm:false}).expect(204)

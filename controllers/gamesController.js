@@ -49,8 +49,13 @@ async function list(req, res) {
 async function detail(req, res) {
   const game = await Game.findById(lookupId(req.params.id)).lean()
   if (!game) throw missing()
-  const reviews = await Review.find({ game: game._id }).select('name text rating createdAt').sort('-createdAt').limit(50).lean()
-  res.json({ ...game, reviews })
+  const [reviews, [stats]] = await Promise.all([
+    Review.find({ game: game._id }).select('name text rating createdAt').sort('-createdAt').limit(50).lean(),
+    // Note de la communauté : moyenne de tous les avis notés (les avis sans note ne comptent pas).
+    Review.aggregate([{ $match: { game: game._id, rating: { $gte: 1 } } }, { $group: { _id: null, average: { $avg: '$rating' }, count: { $sum: 1 } } }]),
+  ])
+  const rating = stats ? { average: Math.round(stats.average * 10) / 10, count: stats.count } : { average: null, count: 0 }
+  res.json({ ...game, reviews, rating })
 }
 
 async function review(req, res) {

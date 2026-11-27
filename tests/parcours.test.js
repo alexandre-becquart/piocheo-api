@@ -81,6 +81,11 @@ test('Parcours Piochéo avec MongoDB', async t => {
     await guest.put('/games/' + game._id + '/review').send({ text: 'Très chouette', rating: null }).expect(204)
     const detail = await anonymous.get('/games/' + game._id).expect(200)
     assert.equal(detail.body.reviews[0].text, 'Très chouette')
+    assert.deepEqual(detail.body.rating, { average: null, count: 0 })
+    await host.put('/games/' + game._id + '/review').send({ text: 'Excellent', rating: 5 }).expect(204)
+    await other.put('/games/' + game._id + '/review').send({ text: 'Pas mal du tout', rating: 4 }).expect(204)
+    // L'avis sans note ne compte pas : (5 + 4) / 2.
+    assert.deepEqual((await anonymous.get('/games/' + game._id).expect(200)).body.rating, { average: 4.5, count: 2 })
   })
 
   await t.test('demandes en concurrence sur la dernière place', async () => {
